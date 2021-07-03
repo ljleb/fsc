@@ -13,12 +13,12 @@ namespace fsc {
         static Options from_args(std::vector<std::string> const& args) {
             std::string const* notes_file_name { nullptr };
             std::string const* output_file_name { nullptr };
-            std::string const* pitches_file_name { nullptr };
+            std::string const* pans_file_name { nullptr };
             std::string const* velocities_file_name { nullptr };
             std::string const* releases_file_name { nullptr };
             std::string const* mod_xs_file_name { nullptr };
             std::string const* mod_ys_file_name { nullptr };
-            std::string const* pans_file_name { nullptr };
+            std::string const* pitches_file_name { nullptr };
 
             for (uint8_t i { 0 }; i < args.size(); i += 2) {
                 if (i + 1 >= args.size())
@@ -28,7 +28,15 @@ namespace fsc {
 
                 auto const& arg { args[i] };
 
-                if (arg == "-p" || arg == "--pan-from") {
+                if (!arg.starts_with("-")) {
+                    notes_file_name = &arg;
+                    output_file_name = &args[i+1];
+
+                    if (i + 2 < args.size()) {
+                        show_usage_and_exit();
+                    }
+                }
+                else if (arg == "-p" || arg == "--pan-from") {
                     pans_file_name = &args[i+1];
                 }
                 else if (arg == "-V" || arg == "--velocity-from") {
@@ -47,12 +55,7 @@ namespace fsc {
                     pitches_file_name = &args[i+1];
                 }
                 else {
-                    notes_file_name = &arg;
-                    output_file_name = &args[i+1];
-
-                    if (i + 2 < args.size()) {
-                        show_usage_and_exit();
-                    }
+                    show_usage_and_exit();
                 }
             }
 

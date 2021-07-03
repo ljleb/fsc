@@ -68,8 +68,8 @@ namespace fsc {
 
                 _samples_position = ifstream.tellg();
 
-                uint32_t const&& samples_size { header.get_data_size() - _samples_position };
-                for (uint32_t i { 0 }; i < samples_size; i += FscSample<_block_identifier>::SIZE) {
+                uint32_t const&& samples_count { (header.get_data_size() - _samples_position) / FscSample<_block_identifier>::SIZE };
+                for (uint32_t i { 0 }; i < samples_count; ++i) {
                     _samples.emplace_back(ifstream);
                 }
             }

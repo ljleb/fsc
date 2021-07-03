@@ -58,31 +58,32 @@ namespace fsc {
             ifstream.seekg(1, std::ios::cur);
             ifstream.read(reinterpret_cast<char*>(&_pan), sizeof(_pan));
             ifstream.read(reinterpret_cast<char*>(&_velocity), sizeof(_velocity));
-            ifstream.seekg(2, std::ios::cur);
+            ifstream.read(reinterpret_cast<char*>(&_mod_x), sizeof(_mod_x));
+            ifstream.read(reinterpret_cast<char*>(&_mod_y), sizeof(_mod_y));
         }
 
         constexpr void set_pan(float const& pan) noexcept {
-            _pan = static_cast<uint8_t>(pan * 128);
+            _pan = static_cast<uint8_t>(pan * 0x80);
         }
 
         constexpr void set_velocity(float const& velocity) noexcept {
-            _velocity = static_cast<uint8_t>(velocity * 128);
+            _velocity = static_cast<uint8_t>(velocity * 0x80);
         }
 
         constexpr void set_release(float const& release) noexcept {
-            _release = static_cast<uint8_t>(release * 128);
+            _release = static_cast<uint8_t>(release * 0x80);
         }
 
         constexpr void set_mod_x(float const& mod_x) noexcept {
-            _mod_x = static_cast<uint8_t>(mod_x * 255);
+            _mod_x = static_cast<uint8_t>(mod_x * 0xff);
         }
 
-        constexpr void set_mod_y(float const& mod_x) noexcept {
-            _mod_x = static_cast<uint8_t>(mod_x * 255);
+        constexpr void set_mod_y(float const& mod_y) noexcept {
+            _mod_y = static_cast<uint8_t>(mod_y * 0xff);
         }
 
         constexpr void set_pitch(float const& pitch) noexcept {
-            _pitch = static_cast<uint8_t>(pitch * 255);
+            _pitch = static_cast<uint8_t>(pitch * 0xf0);
         }
 
         constexpr void update_block(char* const& input_data) const noexcept {
