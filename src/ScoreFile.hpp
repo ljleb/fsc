@@ -1,15 +1,15 @@
-#ifndef FSC2MIDI_SCORE_FILE_HPP
-#define FSC2MIDI_SCORE_FILE_HPP
+#ifndef FSC2FSC_SCORE_FILE_HPP
+#define FSC2FSC_SCORE_FILE_HPP
 
-#include <ScoreSample.hpp>
-#include <MagicalIdentifier.hpp>
+#include <ScoreBlock.hpp>
+#include <BlockIdentifier.hpp>
 
 #include <fstream>
 #include <vector>
 #include <memory>
 
 namespace s2m {
-    template <MagicalIdentifier::Enum _magical_identifier>
+    template <BlockIdentifier::Enum _block_identifier>
     struct ScoreFile {
         constexpr ScoreFile() noexcept:
             _status { true }
@@ -22,28 +22,25 @@ namespace s2m {
                 return;
             }
 
-            file.seekg(0x30, std::ios::beg);
-
-            uint8_t actual_magical_identifier;
-            file.read(reinterpret_cast<char*>(&actual_magical_identifier), sizeof(actual_magical_identifier));
-            _status = actual_magical_identifier == _magical_identifier;
+            read_header(file);
             if (!_status) {
                 return;
             }
 
-            uint8_t data_segment_size;
-            file.read(reinterpret_cast<char*>(&data_segment_size), sizeof(data_segment_size));
-
-            for (uint32_t i { 0 }; i < data_segment_size; i += ScoreSample<_magical_identifier>::SIZE) {
-                _samples.emplace_back(file);
+            read_fl_version(file);
+            if (!_status) {
+                return;
             }
 
-            uint32_t const& file_size { file.tellg() };
-            _input_data = std::make_unique<char[]>(file_size + 1);
-            _input_data[file_size] = '\0';
+            read_gibberish(file);
+            if (!_status) {
+                return;
+            }
 
-            file.seekg(0, std::ios::beg);
-            file.read(_input_data.get(), file_size);
+            read_samples(file);
+            if (!_status) {
+                return;
+            }
         }
 
         void write(std::string const& file_name) {
@@ -55,10 +52,10 @@ namespace s2m {
 
             file.write(_input_data.get(), 0x32);
 
-            for (ScoreSample<_magical_identifier> const& sample: _samples) {
+            for (ScoreBlock<_block_identifier> const& sample: _samples) {
                 char* const& current_data { _input_data.get() + file.tellp() };
                 sample.update_pitch(current_data);
-                file.write(current_data, ScoreSample<_magical_identifier>::SIZE);
+                file.write(current_data, ScoreBlock<_block_identifier>::SIZE);
             }
         }
 
@@ -66,14 +63,57 @@ namespace s2m {
             return _status;
         }
 
-        std::vector<ScoreSample<_magical_identifier>>& samples() {
+        std::vector<ScoreBlock<_block_identifier>>& samples() {
             return _samples;
         }
 
     private:
         bool _status;
-        std::vector<ScoreSample<_magical_identifier>> _samples;
+        std::vector<ScoreBlock<_block_identifier>> _samples;
         std::unique_ptr<char[]> _input_data;
+
+        void read_header(std::ifstream& file) {
+            file.seekg(0x16, std::ios::beg);
+        }
+
+        void read_fl_version(std::ifstream& file) {
+            uint8_t fl_version_identifier;
+            file.read(reinterpret_cast<char*>(&fl_version_identifier), sizeof(fl_version_identifier));
+            _status = fl_version_identifier == BlockIdentifier::FL_VERSION;
+            if (!_status) {
+                return;
+            }
+
+            uint8_t fl_version_size;
+            file.read(reinterpret_cast<char*>(&fl_version_size), sizeof(fl_version_size));
+            file.seekg(fl_version_size, std::ios::cur);
+        }
+
+        void read_gibberish(std::ifstream& file) {
+            file.seekg(0x0c, std::ios::cur);
+        }
+
+        void read_samples(std::ifstream& file) {
+            uint8_t actual_block_identifier;
+            file.read(reinterpret_cast<char*>(&actual_block_identifier), sizeof(actual_block_identifier));
+            _status = actual_block_identifier == _block_identifier;
+            if (!_status) {
+                return;
+            }
+
+            uint8_t blocks_size;
+            file.read(reinterpret_cast<char*>(&blocks_size), sizeof(blocks_size));
+
+            for (uint32_t i { 0 }; i < blocks_size; i += ScoreBlock<_block_identifier>::SIZE) {
+                _samples.emplace_back(file);
+            }
+
+            uint32_t const& file_size { file.tellg() };
+            _input_data = std::make_unique<char[]>(file_size);
+
+            file.seekg(0, std::ios::beg);
+            file.read(_input_data.get(), file_size);
+        }
     };
 }
 

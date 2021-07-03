@@ -2,8 +2,8 @@
 #include <iostream>
 
 void applyPitches(
-    std::vector<s2m::ScoreSample<s2m::MagicalIdentifier::NOTE>>& notes,
-    std::vector<s2m::ScoreSample<s2m::MagicalIdentifier::PITCH>> const& pitches);
+    std::vector<s2m::ScoreBlock<s2m::BlockIdentifier::NOTE>>& notes,
+    std::vector<s2m::ScoreBlock<s2m::BlockIdentifier::PITCH>> const& pitches);
 
 int main(int argc, char** argv)
 {
@@ -14,7 +14,7 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    s2m::ScoreFile<s2m::MagicalIdentifier::PITCH> pitch_file;
+    s2m::ScoreFile<s2m::BlockIdentifier::PITCH> pitch_file;
     pitch_file.read(args[1]);
     if (!pitch_file.status())
     {
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    s2m::ScoreFile<s2m::MagicalIdentifier::NOTE> note_file;
+    s2m::ScoreFile<s2m::BlockIdentifier::NOTE> note_file;
     note_file.read(args[2]);
     if (!note_file.status())
     {
@@ -36,12 +36,12 @@ int main(int argc, char** argv)
 }
 
 void applyPitches(
-    std::vector<s2m::ScoreSample<s2m::MagicalIdentifier::NOTE>>& notes,
-    std::vector<s2m::ScoreSample<s2m::MagicalIdentifier::PITCH>> const& pitches) {
-    for (s2m::ScoreSample<s2m::MagicalIdentifier::NOTE>& note: notes) {
+    std::vector<s2m::ScoreBlock<s2m::BlockIdentifier::NOTE>>& notes,
+    std::vector<s2m::ScoreBlock<s2m::BlockIdentifier::PITCH>> const& pitches) {
+    for (s2m::ScoreBlock<s2m::BlockIdentifier::NOTE>& note: notes) {
 
-        s2m::ScoreSample<s2m::MagicalIdentifier::PITCH> const* closest_pitch { &pitches[0] };
-        for (s2m::ScoreSample<s2m::MagicalIdentifier::PITCH> const& pitch: pitches) {
+        s2m::ScoreBlock<s2m::BlockIdentifier::PITCH> const* closest_pitch { &pitches[0] };
+        for (s2m::ScoreBlock<s2m::BlockIdentifier::PITCH> const& pitch: pitches) {
             if (note.get_position() > pitch.get_position()) {
                 break;
             }
