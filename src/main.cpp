@@ -36,6 +36,10 @@ int main(int argc, char** argv)
         note.set_velocity(velocity);
     });
 
+    read_and_apply_events(note_file, options.releases_file_name(), [](auto& note, auto const& release) {
+        note.set_release(release);
+    });
+
     read_and_apply_events(note_file, options.pitches_file_name(), [](auto& note, auto const& pitch) {
         note.set_pitch(pitch);
     });

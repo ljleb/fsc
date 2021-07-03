@@ -14,7 +14,7 @@ namespace s2m {
     struct ScoreFile {
         std::optional<std::string> read(std::string const& file_name) {
             std::ifstream file { file_name, std::ios::binary };
-            if (file.bad()) {
+            if (!file.good()) {
                 return "error reading file " + file_name;
             }
 
@@ -33,9 +33,20 @@ namespace s2m {
                 return gibberish_error;
             }
 
-            auto const&& samples_error { read_samples(file) };
+            auto const&& samples_error { read_samples(file, file_name) };
             if (samples_error.has_value()) {
                 return samples_error;
+            }
+
+            file.close();
+            file.clear();
+            file.open(file_name, std::ios::binary);
+            if (!file.good()) {
+                return "error reading file " + file_name;
+            }
+            auto const&& file_data_error { read_file_data(file) };
+            if (file_data_error.has_value()) {
+                return file_data_error;
             }
 
             return {};
@@ -43,14 +54,15 @@ namespace s2m {
 
         std::optional<std::string> write(std::string const& file_name) {
             std::ofstream file { file_name, std::ios::binary };
-            if (file.bad()) {
+            if (!file.good()) {
                 return "error writing to file " + file_name;
             }
 
-            file.write(_read_data.get(), _samples_position);
+            file.seekp(0, std::ios::beg);
+            file.write(_file_data.get(), _samples_position);
 
             for (ScoreBlock<_block_identifier> const& sample: _samples) {
-                char* const& current_data { _read_data.get() + file.tellp() };
+                char* const& current_data { _file_data.get() + file.tellp() };
                 sample.update_block(current_data);
                 file.write(current_data, ScoreBlock<_block_identifier>::SIZE);
             }
@@ -64,16 +76,17 @@ namespace s2m {
 
     private:
         std::vector<ScoreBlock<_block_identifier>> _samples;
-        std::unique_ptr<char[]> _read_data;
+        std::unique_ptr<char[]> _file_data;
+        uint32_t _data_size;
         uint32_t _samples_position;
         uint8_t _samples_size_size;
 
         std::optional<std::string> read_header(std::ifstream& file) {
             file.seekg(0x12, std::ios::beg);
 
-            uint32_t data_size;
-            file.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
-            _samples_size_size = 1 + (data_size > 0xa0) + (data_size > 0x4022);
+            file.read(reinterpret_cast<char*>(&_data_size), sizeof(_data_size));
+            _samples_size_size = 1 + (_data_size > 0xa0) + (_data_size > 0x4022);
+            _data_size += ScoreBlock<BlockIdentifier::HEADER>::SIZE;
 
             return {};
         }
@@ -98,7 +111,7 @@ namespace s2m {
             return {};
         }
 
-        std::optional<std::string> read_samples(std::ifstream& file) {
+        std::optional<std::string> read_samples(std::ifstream& file, std::string const& file_name) {
             uint8_t actual_block_identifier;
             file.read(reinterpret_cast<char*>(&actual_block_identifier), sizeof(actual_block_identifier));
             if (actual_block_identifier != _block_identifier) {
@@ -123,11 +136,12 @@ namespace s2m {
                 _samples.emplace_back(file);
             }
 
-            uint32_t const& file_size { _samples_position + samples_size * ScoreBlock<_block_identifier>::SIZE };
-            _read_data = std::make_unique<char[]>(file_size);
+            return {};
+        }
 
-            file.seekg(0, std::ios::beg);
-            file.read(_read_data.get(), file_size);
+        std::optional<std::string> read_file_data(std::ifstream& file) {
+            _file_data = std::make_unique<char[]>(_data_size);
+            file.read(_file_data.get(), _data_size);
 
             return {};
         }

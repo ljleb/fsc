@@ -4,6 +4,7 @@
 namespace s2m {
     namespace BlockIdentifier {
         enum Enum {
+            HEADER = 0x64684c46,
             FL_VERSION = 0xc7,
             EVENT = 0xdf,
             NOTE = 0xe0,

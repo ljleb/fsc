@@ -16,8 +16,8 @@ release: $(OUT)/release/$(NAME)
 .PHONY:
 debug: $(OUT)/debug/$(NAME)
 
-$(OUT)/%/$(NAME): $(wildcard $(SRC)/*.hpp) $(SRC)/main.cpp | $(OUT)/%/
-	$(CXX) $(CXX_$*_OPTIONS) $(CXX_LIBS) -o $@ $^
+$(OUT)/%/$(NAME): $(SRC)/main.cpp $(wildcard ./$(SRC)/*.hpp) | $(OUT)/%/
+	$(CXX) $(CXX_$*_OPTIONS) $(CXX_LIBS) -o $@ $<
 
 .PHONY:
 clean:
