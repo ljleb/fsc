@@ -3,9 +3,10 @@
 
 #include <vector>
 #include <string>
+#include <functional>
 #include <optional>
-#include <cstdint>
 #include <iostream>
+#include <cstdint>
 
 namespace s2m {
     struct Options {
