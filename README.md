@@ -4,7 +4,7 @@
 
 ## Usage
 
-`fsc`, at the time of writing this, is a Command Line Interface (CLI). You can use it by opening a terminal and typing:
+At the time of writing this, `fsc` is a Command Line Interface (CLI). You can use it by opening a terminal and typing:
 
 ```sh
 fsc [options] <notes-fsc> <output-fsc>
