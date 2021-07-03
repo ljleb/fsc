@@ -46,27 +46,27 @@ namespace s2m {
     };
 
     template <>
-    struct ScoreBlock<BlockIdentifier::PITCH> : public _internal::ScoreBlockBase {
-        static constexpr uint8_t SIZE { 12 };
+    struct ScoreBlock<BlockIdentifier::EVENT> : public _internal::ScoreBlockBase {
+        static constexpr uint8_t SIZE { 0xc };
 
         ScoreBlock(std::ifstream& ifstream):
             _internal::ScoreBlockBase { ifstream }
         {
             ifstream.seekg(sizeof(uint32_t), std::ios::cur);
-            ifstream.read(reinterpret_cast<char*>(&_pitch), sizeof(_pitch));
+            ifstream.read(reinterpret_cast<char*>(&_value), sizeof(_value));
         }
 
-        constexpr float const& get_pitch() const noexcept {
-            return _pitch;
+        constexpr float const& get_value() const noexcept {
+            return _value;
         }
 
     private:
-        float _pitch;
+        float _value;
     };
 
     template <>
     struct ScoreBlock<BlockIdentifier::NOTE> : _internal::ScoreBlockBase {
-        static constexpr uint8_t SIZE { 24 };
+        static constexpr uint8_t SIZE { 0x18 };
 
         ScoreBlock(std::ifstream& ifstream):
             _internal::ScoreBlockBase { ifstream }
@@ -80,7 +80,7 @@ namespace s2m {
             _pitch = static_cast<uint8_t>(pitch * 255);
         }
 
-        constexpr void update_pitch(char* const& input_data) const noexcept {
+        constexpr void update_block(char* const& input_data) const noexcept {
             input_data[16] = _pitch;
         }
 

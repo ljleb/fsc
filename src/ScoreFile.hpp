@@ -51,7 +51,7 @@ namespace s2m {
 
             for (ScoreBlock<_block_identifier> const& sample: _samples) {
                 char* const& current_data { _read_data.get() + file.tellp() };
-                sample.update_pitch(current_data);
+                sample.update_block(current_data);
                 file.write(current_data, ScoreBlock<_block_identifier>::SIZE);
             }
 
@@ -66,9 +66,14 @@ namespace s2m {
         std::vector<ScoreBlock<_block_identifier>> _samples;
         std::unique_ptr<char[]> _read_data;
         uint32_t _samples_position;
+        uint8_t _samples_size_size;
 
         std::optional<std::string> read_header(std::ifstream& file) {
-            file.seekg(0x16, std::ios::beg);
+            file.seekg(0x12, std::ios::beg);
+
+            uint32_t data_size;
+            file.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
+            _samples_size_size = 1 + (data_size > 0xa0) + (data_size > 0x4022);
 
             return {};
         }
@@ -100,16 +105,25 @@ namespace s2m {
                 return "expected block identifier " + std::to_string(_block_identifier);
             }
 
-            uint8_t blocks_size;
-            file.read(reinterpret_cast<char*>(&blocks_size), sizeof(blocks_size));
+            uint32_t samples_size { 0 };
+            file.read(reinterpret_cast<char*>(&samples_size), _samples_size_size);
+            if (_samples_size_size >= 2) {
+                samples_size -= 0x100;
+            }
+            if (_samples_size_size >= 3) {
+                samples_size -= 0x10000;
+            }
+            if (samples_size > 0x100) {
+                samples_size -= 0x80;
+            }
 
             _samples_position = file.tellg();
 
-            for (uint32_t i { 0 }; i < blocks_size; i += ScoreBlock<_block_identifier>::SIZE) {
+            for (uint32_t i { 0 }; i < samples_size; i += ScoreBlock<_block_identifier>::SIZE) {
                 _samples.emplace_back(file);
             }
 
-            uint32_t const& file_size { file.tellg() };
+            uint32_t const& file_size { _samples_position + samples_size * ScoreBlock<_block_identifier>::SIZE };
             _read_data = std::make_unique<char[]>(file_size);
 
             file.seekg(0, std::ios::beg);
