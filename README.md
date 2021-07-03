@@ -2,6 +2,10 @@
 
 `fsc` is a [*Fruity Loop* score file](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/fformats_other_fsc.htm) editor. It allows to apply many operations that cannot be automated or done easily directly in FL Studio.
 
+## Download
+
+You can hop to the [Relases page](https://github.com/lebel-louisjacob/fsc/releases) and select your platform to get the latest version of the tool.
+
 ## Usage
 
 At the time of writing this, `fsc` is a Command Line Interface (CLI). You can use it by opening a terminal and typing:
