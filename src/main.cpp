@@ -28,18 +28,22 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    read_and_apply_events(note_file, options.pitches_file_name(), [](auto& note, auto const& pitch) {
-        note.set_pitch(pitch);
+    read_and_apply_events(note_file, options.pans_file_name(), [](auto& note, auto const& pan) {
+        note.set_pan(pan);
     });
 
     read_and_apply_events(note_file, options.velocities_file_name(), [](auto& note, auto const& velocity) {
         note.set_velocity(velocity);
     });
 
-    auto const&& write_error { note_file.write(options.output_file_name()) };
-    if (write_error.has_value())
+    read_and_apply_events(note_file, options.pitches_file_name(), [](auto& note, auto const& pitch) {
+        note.set_pitch(pitch);
+    });
+
+    auto const&& output_write_error { note_file.write(options.output_file_name()) };
+    if (output_write_error.has_value())
     {
-        std::cerr << write_error.value() << std::endl;
+        std::cerr << output_write_error.value() << std::endl;
         exit(1);
     }
     return 0;
