@@ -12,6 +12,8 @@ fsc [options] <notes-fsc> <output-fsc>
 
 In the above snippet, `<notes-fsc>` is the path to the *input* `.fsc` note data file, `<output-fsc>` is the path to the *resulting* `.fsc` note data file, and `[options]` is any combination of the supported options described below.
 
+By default, `fsc` simply copies the contents of `<notes-fsc>` to `<output-fsc>`, without applying any modification.
+
 *Be careful when selecting an output path. Currently, if the file already exists, `fsc` silently overwrites the content!*
 
 Supported options:
