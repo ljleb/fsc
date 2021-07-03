@@ -16,12 +16,12 @@ In the above snippet, `<notes-fsc>` is the path to the *input* `.fsc` note data 
 
 Supported options:
 
-- `--pan-from <events-fsc>` (`-p` for short) : map the `<events-fsc>` file *event data* to the pan of the notes
-- `--velocity-from <events-fsc>` (`-V` for short) : map the `<events-fsc>` file *event data* to the **Velocity** of the notes
-- `--release-from <events-fsc>` (`-R` for short) : map the `<events-fsc>` file *event data* to the **Release** of the notes
-- `--mod-x-from <events-fsc>` (`-x` for short) : map the `<events-fsc>` file *event data* to the **Modulation X** of the notes
-- `--mod-y-from <events-fsc>` (`-y` for short) : map the `<events-fsc>` file *event data* to the **Modulation Y** of the notes
-- `--pitch-from <events-fsc>` (`-P` for short) : map the `<events-fsc>` file *event data* to the **Pitch** of the notes
+- `--pan-from <events-fsc>` *(shorthand `-p`)* : map the `<events-fsc>` file *event data* to the pan of the notes
+- `--velocity-from <events-fsc>` *(shorthand `-V`)* : map the `<events-fsc>` file *event data* to the **Velocity** of the notes
+- `--release-from <events-fsc>` *(shorthand `-R`)* : map the `<events-fsc>` file *event data* to the **Release** of the notes
+- `--mod-x-from <events-fsc>` *(shorthand `-x`)* : map the `<events-fsc>` file *event data* to the **Modulation X** of the notes
+- `--mod-y-from <events-fsc>` *(shorthand `-y`)* : map the `<events-fsc>` file *event data* to the **Modulation Y** of the notes
+- `--pitch-from <events-fsc>` *(shorthand `-P`)* : map the `<events-fsc>` file *event data* to the **Pitch** of the notes
 
 ## Build
 
