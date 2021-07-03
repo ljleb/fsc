@@ -92,7 +92,7 @@ namespace fsc {
             input_data[0x12] = _release;
             input_data[0x16] = _mod_x;
             input_data[0x17] = _mod_y;
-            input_data[0x0f] = _pitch;
+            input_data[0x10] = _pitch;
         }
 
     private:
