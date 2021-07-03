@@ -5,8 +5,8 @@
 
 template <typename SetEventFunction>
 void apply_events(
-    std::vector<fsc::FscBlock<fsc::FscBlockIdentifier::NOTE>>& notes,
-    std::vector<fsc::FscBlock<fsc::FscBlockIdentifier::EVENT>> const& samples,
+    fsc::FscBlock<fsc::FscBlockIdentifier::NOTE>& notes,
+    fsc::FscBlock<fsc::FscBlockIdentifier::EVENT> const& events,
     SetEventFunction const& set_event);
 
 template <typename SetEventFunction>
@@ -67,24 +67,24 @@ void read_and_apply_events(
             exit(1);
         }
 
-        apply_events(note_file.samples(), file.samples(), set_event);
+        apply_events(note_file.block(), file.block(), set_event);
     }
 }
 
 template <typename SetEventFunction>
 void apply_events(
-    std::vector<fsc::FscBlock<fsc::FscBlockIdentifier::NOTE>>& notes,
-    std::vector<fsc::FscBlock<fsc::FscBlockIdentifier::EVENT>> const& samples,
+    fsc::FscBlock<fsc::FscBlockIdentifier::NOTE>& notes,
+    fsc::FscBlock<fsc::FscBlockIdentifier::EVENT> const& events,
     SetEventFunction const& set_event
 ) {
-    for (fsc::FscBlock<fsc::FscBlockIdentifier::NOTE>& note: notes) {
-        fsc::FscBlock<fsc::FscBlockIdentifier::EVENT> const* closest_sample { &samples[0] };
-        for (fsc::FscBlock<fsc::FscBlockIdentifier::EVENT> const& sample: samples) {
-            if (sample.get_position() <= note.get_position() && sample.get_position() > closest_sample->get_position()) {
-                closest_sample = &sample;
+    for (fsc::FscSample<fsc::FscBlockIdentifier::NOTE>& note: notes.get_samples()) {
+        fsc::FscSample<fsc::FscBlockIdentifier::EVENT> const*&& closest_event { &events.get_samples()[0] };
+        for (fsc::FscSample<fsc::FscBlockIdentifier::EVENT> const& event: events.get_samples()) {
+            if (event.get_position() <= note.get_position() && event.get_position() > closest_event->get_position()) {
+                closest_event = &event;
             }
         }
 
-        set_event(note, closest_sample->get_value());
+        set_event(note, closest_event->get_value());
     }
 }

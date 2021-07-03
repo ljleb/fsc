@@ -24,7 +24,7 @@ namespace fsc {
                 return header_error;
             }
 
-            auto const&& fl_version_error { read_fl_version(file) };
+            auto const&& fl_version_error { read_block(file, _fl_version) };
             if (fl_version_error.has_value()) {
                 return fl_version_error;
             }
@@ -34,9 +34,9 @@ namespace fsc {
                 return gibberish_error;
             }
 
-            auto const&& samples_error { read_samples(file, file_name) };
-            if (samples_error.has_value()) {
-                return samples_error;
+            auto const&& block_error { read_block(file, _block) };
+            if (block_error.has_value()) {
+                return block_error;
             }
 
             file.close();
@@ -61,42 +61,29 @@ namespace fsc {
             }
 
             file.seekp(0, std::ios::beg);
-            file.write(_file_data.get(), _header->get_samples_position());
+            file.write(_file_data.get(), _block->get_samples_position());
 
-            for (FscBlock<_block_identifier> const& sample: _samples) {
+            for (FscSample<_block_identifier> const& sample: _block->get_samples()) {
                 char* const& current_data { _file_data.get() + file.tellp() };
                 sample.update_block(current_data);
-                file.write(current_data, FscBlock<_block_identifier>::SIZE);
+                file.write(current_data, FscSample<_block_identifier>::SIZE);
             }
 
             return {};
         }
 
-        std::vector<FscBlock<_block_identifier>>& samples() {
-            return _samples;
+        FscBlock<_block_identifier>& block() {
+            return *_block;
         }
 
     private:
-        std::vector<FscBlock<_block_identifier>> _samples;
         std::unique_ptr<FscBlock<FscBlockIdentifier::HEADER>> _header;
+        std::unique_ptr<FscBlock<FscBlockIdentifier::FL_VERSION>> _fl_version;
+        std::unique_ptr<FscBlock<_block_identifier>> _block;
         std::unique_ptr<char[]> _file_data;
 
         std::optional<std::string> read_header(std::ifstream& file) {
             _header = std::make_unique<FscBlock<FscBlockIdentifier::HEADER>>(file);
-            return {};
-        }
-
-        std::optional<std::string> read_fl_version(std::ifstream& file) {
-            uint8_t fl_version_identifier;
-            file.read(reinterpret_cast<char*>(&fl_version_identifier), sizeof(fl_version_identifier));
-            if (fl_version_identifier != FscBlockIdentifier::FL_VERSION) {
-                return "expected fl version identifier";
-            }
-
-            uint8_t fl_version_size;
-            file.read(reinterpret_cast<char*>(&fl_version_size), sizeof(fl_version_size));
-            file.seekg(fl_version_size, std::ios::cur);
-
             return {};
         }
 
@@ -105,18 +92,19 @@ namespace fsc {
             return {};
         }
 
-        std::optional<std::string> read_samples(std::ifstream& file, std::string const& file_name) {
+        template <FscBlockIdentifier::Enum _specific_block_identifier = _block_identifier>
+        std::optional<std::string> read_block(std::ifstream& file, std::unique_ptr<FscBlock<_specific_block_identifier>>& block) {
             uint8_t actual_block_identifier;
             file.read(reinterpret_cast<char*>(&actual_block_identifier), sizeof(actual_block_identifier));
-            if (actual_block_identifier != _block_identifier) {
-                return "expected block identifier " + std::to_string(_block_identifier);
+            if (actual_block_identifier != _specific_block_identifier) {
+                return "expected block identifier " + std::to_string(_specific_block_identifier);
             }
 
-            file.seekg(_header->get_samples_size_size(), std::ios::cur);
-
-            uint32_t const&& samples_size { _header->get_samples_size() };
-            for (uint32_t i { 0 }; i < samples_size; i += FscBlock<_block_identifier>::SIZE) {
-                _samples.emplace_back(file);
+            if constexpr (std::is_base_of_v<_internal::FscSamplesBlock<_specific_block_identifier>, FscBlock<_specific_block_identifier>>) {
+                block = std::make_unique<FscBlock<_specific_block_identifier>>(file, *_header);
+            }
+            else {
+                block = std::make_unique<FscBlock<_specific_block_identifier>>(file);
             }
 
             return {};
