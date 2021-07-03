@@ -2,45 +2,63 @@
 #define FSC2MIDI_SCORE_FILE_HPP
 
 #include <ScoreSample.hpp>
+#include <MagicalIdentifier.hpp>
+
 #include <fstream>
 #include <vector>
-
-#include <iostream>
+#include <memory>
 
 namespace s2m {
+    template <MagicalIdentifier::Enum _magical_identifier>
     struct ScoreFile {
-        ScoreFile():
+        constexpr ScoreFile() noexcept:
             _status { true }
         {}
 
         void read(std::string const& file_name) {
-            std::ifstream raw_file { file_name, std::ios::binary };
-            _status = raw_file.bad();
+            std::ifstream file { file_name, std::ios::binary };
+            _status = file.good();
             if (!_status) {
                 return;
             }
 
-            raw_file.seekg(0x31, std::ios::beg);
+            file.seekg(0x30, std::ios::beg);
+
+            uint8_t actual_magical_identifier;
+            file.read(reinterpret_cast<char*>(&actual_magical_identifier), sizeof(actual_magical_identifier));
+            _status = actual_magical_identifier == _magical_identifier;
+            if (!_status) {
+                return;
+            }
 
             uint8_t data_segment_size;
-            raw_file.read(reinterpret_cast<char*>(&data_segment_size), sizeof(data_segment_size));
-            // std::cout << "size of data: " << (uint32_t) data_segment_size << std::endl;
+            file.read(reinterpret_cast<char*>(&data_segment_size), sizeof(data_segment_size));
 
-            for (uint32_t i { 0 }; i < data_segment_size / 12; ++i) {
-                uint32_t score_position;
-                uint32_t score_type;
-                float score_value;
+            for (uint32_t i { 0 }; i < data_segment_size; i += ScoreSample<_magical_identifier>::SIZE) {
+                _samples.emplace_back(file);
+            }
 
-                raw_file.read(reinterpret_cast<char*>(&score_position), sizeof(score_position));
-                raw_file.read(reinterpret_cast<char*>(&score_type), sizeof(score_type));
-                raw_file.read(reinterpret_cast<char*>(&score_value), sizeof(score_value));
+            uint32_t const& file_size { file.tellg() };
+            _input_data = std::make_unique<char[]>(file_size + 1);
+            _input_data[file_size] = '\0';
 
-                // std::cout << "\nscore #" << i << ":" << std::endl;
-                // std::cout << "score position: " << score_position << std::endl;
-                // std::cout << "score type: " << score_type << std::endl;
-                // std::cout << "score value: " << score_value << std::endl;
+            file.seekg(0, std::ios::beg);
+            file.read(_input_data.get(), file_size);
+        }
 
-                _samples.emplace_back(score_position, score_type, score_value);
+        void write(std::string const& file_name) {
+            std::ofstream file { file_name, std::ios::binary };
+            _status = file.good();
+            if (!_status) {
+                return;
+            }
+
+            file.write(_input_data.get(), 0x32);
+
+            for (ScoreSample<_magical_identifier> const& sample: _samples) {
+                char* const& current_data { _input_data.get() + file.tellp() };
+                sample.update_pitch(current_data);
+                file.write(current_data, ScoreSample<_magical_identifier>::SIZE);
             }
         }
 
@@ -48,13 +66,14 @@ namespace s2m {
             return _status;
         }
 
-        std::vector<ScoreSample> const& scores() {
-            return _scores;
+        std::vector<ScoreSample<_magical_identifier>>& samples() {
+            return _samples;
         }
 
     private:
-        std::vector<ScoreSample> _samples;
         bool _status;
+        std::vector<ScoreSample<_magical_identifier>> _samples;
+        std::unique_ptr<char[]> _input_data;
     };
 }
 
