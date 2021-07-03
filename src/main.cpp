@@ -32,6 +32,10 @@ int main(int argc, char** argv)
         note.set_pitch(pitch);
     });
 
+    read_and_apply_events(note_file, options.velocities_file_name(), [](auto& note, auto const& velocity) {
+        note.set_velocity(velocity);
+    });
+
     auto const&& write_error { note_file.write(options.output_file_name()) };
     if (write_error.has_value())
     {

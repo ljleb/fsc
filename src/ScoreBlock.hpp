@@ -73,19 +73,27 @@ namespace s2m {
         {
             ifstream.seekg(12, std::ios::cur);
             ifstream.read(reinterpret_cast<char*>(&_pitch), sizeof(_pitch));
-            ifstream.seekg(7, std::ios::cur);
+            ifstream.seekg(4, std::ios::cur);
+            ifstream.read(reinterpret_cast<char*>(&_velocity), sizeof(_velocity));
+            ifstream.seekg(2, std::ios::cur);
         }
 
         constexpr void set_pitch(float const& pitch) noexcept {
             _pitch = static_cast<uint8_t>(pitch * 255);
         }
 
+        constexpr void set_velocity(float const& velocity) noexcept {
+            _velocity = static_cast<uint8_t>(velocity * 128);
+        }
+
         constexpr void update_block(char* const& input_data) const noexcept {
             input_data[16] = _pitch;
+            input_data[21] = _velocity;
         }
 
     private:
         uint8_t _pitch;
+        uint8_t _velocity;
     };
 }
 
