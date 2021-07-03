@@ -20,6 +20,10 @@ namespace fsc {
             std::string const* mod_ys_file_name { nullptr };
             std::string const* pitches_file_name { nullptr };
 
+            if (args.size() < 2) {
+                show_usage_and_exit();
+            }
+
             for (uint8_t i { 0 }; i < args.size(); i += 2) {
                 if (i + 1 >= args.size())
                 {
