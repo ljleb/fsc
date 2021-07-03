@@ -8,7 +8,7 @@
 #include <iostream>
 #include <cstdint>
 
-namespace s2m {
+namespace fsc {
     struct Options {
         static Options from_args(std::vector<std::string> const& args) {
             std::string const* notes_file_name { nullptr };

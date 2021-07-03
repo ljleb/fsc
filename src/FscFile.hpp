@@ -1,19 +1,20 @@
-#ifndef FSC2FSC_SCORE_FILE_HPP
-#define FSC2FSC_SCORE_FILE_HPP
+#ifndef FSC2FSC_FSC_FILE_HPP
+#define FSC2FSC_FSC_FILE_HPP
 
-#include <ScoreBlock.hpp>
-#include <BlockIdentifier.hpp>
+#include <FscBlock.hpp>
+#include <FscBlockIdentifier.hpp>
 
 #include <optional>
 #include <fstream>
 #include <vector>
 #include <memory>
 
-namespace s2m {
-    template <BlockIdentifier::Enum _block_identifier>
-    struct ScoreFile {
+namespace fsc {
+    template <FscBlockIdentifier::Enum _block_identifier>
+    struct FscFile {
         std::optional<std::string> read(std::string const& file_name) {
-            std::ifstream file { file_name, std::ios::binary };
+            std::ifstream file;
+            file.open(file_name, std::ios::binary);
             if (!file.good()) {
                 return "error reading file " + file_name;
             }
@@ -44,6 +45,7 @@ namespace s2m {
             if (!file.good()) {
                 return "error reading file " + file_name;
             }
+
             auto const&& file_data_error { read_file_data(file) };
             if (file_data_error.has_value()) {
                 return file_data_error;
@@ -59,42 +61,35 @@ namespace s2m {
             }
 
             file.seekp(0, std::ios::beg);
-            file.write(_file_data.get(), _samples_position);
+            file.write(_file_data.get(), _header->get_samples_position());
 
-            for (ScoreBlock<_block_identifier> const& sample: _samples) {
+            for (FscBlock<_block_identifier> const& sample: _samples) {
                 char* const& current_data { _file_data.get() + file.tellp() };
                 sample.update_block(current_data);
-                file.write(current_data, ScoreBlock<_block_identifier>::SIZE);
+                file.write(current_data, FscBlock<_block_identifier>::SIZE);
             }
 
             return {};
         }
 
-        std::vector<ScoreBlock<_block_identifier>>& samples() {
+        std::vector<FscBlock<_block_identifier>>& samples() {
             return _samples;
         }
 
     private:
-        std::vector<ScoreBlock<_block_identifier>> _samples;
+        std::vector<FscBlock<_block_identifier>> _samples;
+        std::unique_ptr<FscBlock<FscBlockIdentifier::HEADER>> _header;
         std::unique_ptr<char[]> _file_data;
-        uint32_t _data_size;
-        uint32_t _samples_position;
-        uint8_t _samples_size_size;
 
         std::optional<std::string> read_header(std::ifstream& file) {
-            file.seekg(0x12, std::ios::beg);
-
-            file.read(reinterpret_cast<char*>(&_data_size), sizeof(_data_size));
-            _samples_size_size = 1 + (_data_size > 0xa0) + (_data_size > 0x4022);
-            _data_size += ScoreBlock<BlockIdentifier::HEADER>::SIZE;
-
+            _header = std::make_unique<FscBlock<FscBlockIdentifier::HEADER>>(file);
             return {};
         }
 
         std::optional<std::string> read_fl_version(std::ifstream& file) {
             uint8_t fl_version_identifier;
             file.read(reinterpret_cast<char*>(&fl_version_identifier), sizeof(fl_version_identifier));
-            if (fl_version_identifier != BlockIdentifier::FL_VERSION) {
+            if (fl_version_identifier != FscBlockIdentifier::FL_VERSION) {
                 return "expected fl version identifier";
             }
 
@@ -107,7 +102,6 @@ namespace s2m {
 
         std::optional<std::string> read_gibberish(std::ifstream& file) {
             file.seekg(0x0c, std::ios::cur);
-
             return {};
         }
 
@@ -118,21 +112,10 @@ namespace s2m {
                 return "expected block identifier " + std::to_string(_block_identifier);
             }
 
-            uint32_t samples_size { 0 };
-            file.read(reinterpret_cast<char*>(&samples_size), _samples_size_size);
-            if (_samples_size_size >= 2) {
-                samples_size -= 0x100;
-            }
-            if (_samples_size_size >= 3) {
-                samples_size -= 0x10000;
-            }
-            if (samples_size > 0x100) {
-                samples_size -= 0x80;
-            }
+            file.seekg(_header->get_samples_size_size(), std::ios::cur);
 
-            _samples_position = file.tellg();
-
-            for (uint32_t i { 0 }; i < samples_size; i += ScoreBlock<_block_identifier>::SIZE) {
+            uint32_t const&& samples_size { _header->get_samples_size() };
+            for (uint32_t i { 0 }; i < samples_size; i += FscBlock<_block_identifier>::SIZE) {
                 _samples.emplace_back(file);
             }
 
@@ -140,9 +123,8 @@ namespace s2m {
         }
 
         std::optional<std::string> read_file_data(std::ifstream& file) {
-            _file_data = std::make_unique<char[]>(_data_size);
-            file.read(_file_data.get(), _data_size);
-
+            _file_data = std::make_unique<char[]>(_header->get_data_size());
+            file.read(_file_data.get(), _header->get_data_size());
             return {};
         }
     };

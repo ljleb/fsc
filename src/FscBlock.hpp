@@ -1,20 +1,20 @@
-#ifndef FSC2FSC_SCORE_BLOCK_HPP
-#define FSC2FSC_SCORE_BLOCK_HPP
+#ifndef FSC2FSC_FSC_BLOCK_HPP
+#define FSC2FSC_FSC_BLOCK_HPP
 
-#include <BlockIdentifier.hpp>
+#include <FscBlockIdentifier.hpp>
 
 #include <fstream>
 #include <vector>
 #include <memory>
 #include <cstdint>
 
-namespace s2m {
-    template <BlockIdentifier::Enum _magical_identifier>
-    struct ScoreBlock;
+namespace fsc {
+    template <FscBlockIdentifier::Enum _magical_identifier>
+    struct FscBlock;
 
     namespace _internal {
-        struct ScoreBlockBase {
-            ScoreBlockBase(std::ifstream& ifstream) {
+        struct FscBlockBase {
+            FscBlockBase(std::ifstream& ifstream) {
                 ifstream.read(reinterpret_cast<char*>(&_position), sizeof(_position));
             }
 
@@ -28,14 +28,42 @@ namespace s2m {
     }
 
     template <>
-    struct ScoreBlock<BlockIdentifier::HEADER> {
+    struct FscBlock<FscBlockIdentifier::HEADER> {
         static constexpr uint8_t SIZE { 0x16 };
+
+        FscBlock(std::ifstream& ifstream)
+        {
+            ifstream.seekg(0x12, std::ios::beg);
+            ifstream.read(reinterpret_cast<char*>(&_data_size), sizeof(_data_size));
+            _samples_size_size = 1 + (_data_size > 0xa0) + (_data_size > 0x4022);
+            _data_size += SIZE;
+        }
+
+        uint32_t const& get_data_size() const {
+            return _data_size;
+        }
+
+        uint32_t const get_samples_size() const {
+            return _data_size - get_samples_position();
+        }
+
+        uint32_t const get_samples_position() const {
+            return SIZE + _samples_size_size;
+        }
+
+        uint8_t const& get_samples_size_size() const {
+            return _samples_size_size;
+        }
+
+    private:
+        uint32_t _data_size;
+        uint8_t _samples_size_size;
     };
 
     template <>
-    struct ScoreBlock<BlockIdentifier::FL_VERSION> : public _internal::ScoreBlockBase {
-        ScoreBlock(std::ifstream& ifstream):
-            _internal::ScoreBlockBase { ifstream }
+    struct FscBlock<FscBlockIdentifier::FL_VERSION> : public _internal::FscBlockBase {
+        FscBlock(std::ifstream& ifstream):
+            _internal::FscBlockBase { ifstream }
         {
             uint8_t content_size;
             ifstream.read(reinterpret_cast<char*>(&content_size), sizeof(content_size));
@@ -51,11 +79,11 @@ namespace s2m {
     };
 
     template <>
-    struct ScoreBlock<BlockIdentifier::EVENT> : public _internal::ScoreBlockBase {
+    struct FscBlock<FscBlockIdentifier::EVENT> : public _internal::FscBlockBase {
         static constexpr uint8_t SIZE { 0xc };
 
-        ScoreBlock(std::ifstream& ifstream):
-            _internal::ScoreBlockBase { ifstream }
+        FscBlock(std::ifstream& ifstream):
+            _internal::FscBlockBase { ifstream }
         {
             ifstream.seekg(sizeof(uint32_t), std::ios::cur);
             ifstream.read(reinterpret_cast<char*>(&_value), sizeof(_value));
@@ -70,11 +98,11 @@ namespace s2m {
     };
 
     template <>
-    struct ScoreBlock<BlockIdentifier::NOTE> : _internal::ScoreBlockBase {
+    struct FscBlock<FscBlockIdentifier::NOTE> : _internal::FscBlockBase {
         static constexpr uint8_t SIZE { 0x18 };
 
-        ScoreBlock(std::ifstream& ifstream):
-            _internal::ScoreBlockBase { ifstream }
+        FscBlock(std::ifstream& ifstream):
+            _internal::FscBlockBase { ifstream }
         {
             ifstream.seekg(12, std::ios::cur);
             ifstream.read(reinterpret_cast<char*>(&_pitch), sizeof(_pitch));
