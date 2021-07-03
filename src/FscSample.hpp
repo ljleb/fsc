@@ -73,21 +73,33 @@ namespace fsc {
             _release = static_cast<uint8_t>(release * 128);
         }
 
+        constexpr void set_mod_x(float const& mod_x) noexcept {
+            _mod_x = static_cast<uint8_t>(mod_x * 255);
+        }
+
+        constexpr void set_mod_y(float const& mod_x) noexcept {
+            _mod_x = static_cast<uint8_t>(mod_x * 255);
+        }
+
         constexpr void set_pitch(float const& pitch) noexcept {
             _pitch = static_cast<uint8_t>(pitch * 255);
         }
 
         constexpr void update_block(char* const& input_data) const noexcept {
-            input_data[20] = _pan;
-            input_data[21] = _velocity;
-            input_data[18] = _release;
-            input_data[16] = _pitch;
+            input_data[0x14] = _pan;
+            input_data[0x15] = _velocity;
+            input_data[0x12] = _release;
+            input_data[0x16] = _mod_x;
+            input_data[0x17] = _mod_y;
+            input_data[0x0f] = _pitch;
         }
 
     private:
         uint8_t _pan;
         uint8_t _velocity;
         uint8_t _release;
+        uint8_t _mod_x;
+        uint8_t _mod_y;
         uint8_t _pitch;
     };
 }

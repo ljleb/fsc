@@ -40,6 +40,14 @@ int main(int argc, char** argv)
         note.set_release(release);
     });
 
+    read_and_apply_events(note_file, options.mod_xs_file_name(), [](auto& note, auto const& release) {
+        note.set_mod_x(release);
+    });
+
+    read_and_apply_events(note_file, options.mod_ys_file_name(), [](auto& note, auto const& release) {
+        note.set_mod_y(release);
+    });
+
     read_and_apply_events(note_file, options.pitches_file_name(), [](auto& note, auto const& pitch) {
         note.set_pitch(pitch);
     });
