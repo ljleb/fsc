@@ -1,12 +1,19 @@
 #include <ScoreFile.hpp>
 #include <Options.hpp>
 #include <iostream>
+#include <vector>
 
-template <typename SetEvent>
-void applyPitches(
+template <typename SetEventFunction>
+void apply_events(
     std::vector<s2m::ScoreBlock<s2m::BlockIdentifier::NOTE>>& notes,
     std::vector<s2m::ScoreBlock<s2m::BlockIdentifier::EVENT>> const& samples,
-    SetEvent const& set_event);
+    SetEventFunction const& set_event);
+
+template <typename SetEventFunction>
+void read_and_apply_events(
+    s2m::ScoreFile<s2m::BlockIdentifier::NOTE>& note_file,
+    std::optional<std::reference_wrapper<std::string const> const> const& file_name,
+    SetEventFunction const& set_event);
 
 int main(int argc, char** argv)
 {
@@ -21,22 +28,9 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    auto const& pitches_file_name { options.pitches_file_name() };
-    if (pitches_file_name.has_value()) {
-        s2m::ScoreFile<s2m::BlockIdentifier::EVENT> pitch_file;
-        auto const&& pitches_read_error { pitch_file.read(pitches_file_name.value()) };
-        if (pitches_read_error.has_value()) {
-            std::cerr << pitches_read_error.value() << std::endl;
-            exit(1);
-        }
-
-        applyPitches(
-            note_file.samples(),
-            pitch_file.samples(),
-            [](s2m::ScoreBlock<s2m::BlockIdentifier::NOTE>& note, float const& pitch) {
-                note.set_pitch(pitch);
-            });
-    }
+    read_and_apply_events(note_file, options.pitches_file_name(), [](auto& note, auto const& pitch) {
+        note.set_pitch(pitch);
+    });
 
     auto const&& write_error { note_file.write(options.output_file_name()) };
     if (write_error.has_value())
@@ -47,13 +41,31 @@ int main(int argc, char** argv)
     return 0;
 }
 
-template <typename SetEvent>
-void applyPitches(
+template <typename SetEventFunction>
+void read_and_apply_events(
+    s2m::ScoreFile<s2m::BlockIdentifier::NOTE>& note_file,
+    std::optional<std::reference_wrapper<std::string const> const> const& file_name,
+    SetEventFunction const& set_event
+) {
+    if (file_name.has_value()) {
+        s2m::ScoreFile<s2m::BlockIdentifier::EVENT> file;
+        auto const&& read_error { file.read(file_name.value()) };
+        if (read_error.has_value()) {
+            std::cerr << read_error.value() << std::endl;
+            exit(1);
+        }
+
+        apply_events(note_file.samples(), file.samples(), set_event);
+    }
+}
+
+template <typename SetEventFunction>
+void apply_events(
     std::vector<s2m::ScoreBlock<s2m::BlockIdentifier::NOTE>>& notes,
     std::vector<s2m::ScoreBlock<s2m::BlockIdentifier::EVENT>> const& samples,
-    SetEvent const& set_event) {
+    SetEventFunction const& set_event
+) {
     for (s2m::ScoreBlock<s2m::BlockIdentifier::NOTE>& note: notes) {
-
         s2m::ScoreBlock<s2m::BlockIdentifier::EVENT> const* closest_sample { &samples[0] };
         for (s2m::ScoreBlock<s2m::BlockIdentifier::EVENT> const& sample: samples) {
             if (sample.get_position() <= note.get_position() && sample.get_position() > closest_sample->get_position()) {
