@@ -14,7 +14,7 @@ At the time of writing this, `fsc` is a Command Line Interface (CLI). You can us
 fsc [options] <notes-fsc> <output-fsc>
 ```
 
-In the above snippet, `<notes-fsc>` is the path to the *input* `.fsc` note data file, `<output-fsc>` is the path to the *resulting* `.fsc` note data file, and `[options]` is any combination of the supported options described below.
+In the above snippet, `<notes-fsc>`, `<output-fsc>` and `[options]` are placeholder values. `<notes-fsc>` is the path of the *input* `.fsc` note data file, `<output-fsc>` is the path to the *resulting* `.fsc` note data file, and `[options]` is any combination of the supported options described below.
 
 By default, `fsc` simply copies the contents of `<notes-fsc>` to `<output-fsc>`, without applying any modification.
 
