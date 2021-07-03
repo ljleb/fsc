@@ -10,28 +10,33 @@ int main(int argc, char** argv)
     std::vector<std::string> args { argv, argv + argc };
     if (argc != 4)
     {
-        std::cerr << "usage: fsc2midi <pitches-fsc> <notes-fsc> <output>\n";
+        std::cerr << "usage: fsc2fsc <pitches-fsc> <notes-fsc> <output>\n";
         exit(1);
     }
 
     s2m::ScoreFile<s2m::BlockIdentifier::PITCH> pitch_file;
-    pitch_file.read(args[1]);
-    if (!pitch_file.status())
-    {
-        std::cerr << "Error reading pitches file " << args[1] << std::endl;
+    auto const&& pitches_read_error { pitch_file.read(args[1]) };
+    if (pitches_read_error.has_value()) {
+        std::cerr << pitches_read_error.value() << std::endl;
         exit(1);
     }
 
     s2m::ScoreFile<s2m::BlockIdentifier::NOTE> note_file;
-    note_file.read(args[2]);
-    if (!note_file.status())
+    auto const&& notes_read_error { note_file.read(args[2]) };
+    if (notes_read_error.has_value())
     {
-        std::cerr << "Error reading notes file " << args[2] << std::endl;
+        std::cerr << notes_read_error.value() << std::endl;
         exit(1);
     }
 
     applyPitches(note_file.samples(), pitch_file.samples());
-    note_file.write(args[3]);
+
+    auto const&& write_error { note_file.write(args[3]) };
+    if (write_error.has_value())
+    {
+        std::cerr << write_error.value() << std::endl;
+        exit(1);
+    }
     return 0;
 }
 
@@ -42,10 +47,9 @@ void applyPitches(
 
         s2m::ScoreBlock<s2m::BlockIdentifier::PITCH> const* closest_pitch { &pitches[0] };
         for (s2m::ScoreBlock<s2m::BlockIdentifier::PITCH> const& pitch: pitches) {
-            if (note.get_position() > pitch.get_position()) {
-                break;
+            if (pitch.get_position() < note.get_position() && pitch.get_position() > closest_pitch->get_position()) {
+                closest_pitch = &pitch;
             }
-            closest_pitch = &pitch;
         }
 
         note.set_pitch(closest_pitch->get_pitch());

@@ -4,6 +4,7 @@
 #include <ScoreBlock.hpp>
 #include <BlockIdentifier.hpp>
 
+#include <optional>
 #include <fstream>
 #include <vector>
 #include <memory>
@@ -11,56 +12,50 @@
 namespace s2m {
     template <BlockIdentifier::Enum _block_identifier>
     struct ScoreFile {
-        constexpr ScoreFile() noexcept:
-            _status { true }
-        {}
-
-        void read(std::string const& file_name) {
+        std::optional<std::string> read(std::string const& file_name) {
             std::ifstream file { file_name, std::ios::binary };
-            _status = file.good();
-            if (!_status) {
-                return;
+            if (file.bad()) {
+                return "error reading file " + file_name;
             }
 
-            read_header(file);
-            if (!_status) {
-                return;
+            auto const&& header_error { read_header(file) };
+            if (header_error.has_value()) {
+                return header_error;
             }
 
-            read_fl_version(file);
-            if (!_status) {
-                return;
+            auto const&& fl_version_error { read_fl_version(file) };
+            if (fl_version_error.has_value()) {
+                return fl_version_error;
             }
 
-            read_gibberish(file);
-            if (!_status) {
-                return;
+            auto const&& gibberish_error { read_gibberish(file) };
+            if (gibberish_error.has_value()) {
+                return gibberish_error;
             }
 
-            read_samples(file);
-            if (!_status) {
-                return;
+            auto const&& samples_error { read_samples(file) };
+            if (samples_error.has_value()) {
+                return samples_error;
             }
+
+            return {};
         }
 
-        void write(std::string const& file_name) {
+        std::optional<std::string> write(std::string const& file_name) {
             std::ofstream file { file_name, std::ios::binary };
-            _status = file.good();
-            if (!_status) {
-                return;
+            if (file.bad()) {
+                return "error writing to file " + file_name;
             }
 
-            file.write(_input_data.get(), 0x32);
+            file.write(_read_data.get(), _samples_position);
 
             for (ScoreBlock<_block_identifier> const& sample: _samples) {
-                char* const& current_data { _input_data.get() + file.tellp() };
+                char* const& current_data { _read_data.get() + file.tellp() };
                 sample.update_pitch(current_data);
                 file.write(current_data, ScoreBlock<_block_identifier>::SIZE);
             }
-        }
 
-        bool status() {
-            return _status;
+            return {};
         }
 
         std::vector<ScoreBlock<_block_identifier>>& samples() {
@@ -68,51 +63,59 @@ namespace s2m {
         }
 
     private:
-        bool _status;
         std::vector<ScoreBlock<_block_identifier>> _samples;
-        std::unique_ptr<char[]> _input_data;
+        std::unique_ptr<char[]> _read_data;
+        uint32_t _samples_position;
 
-        void read_header(std::ifstream& file) {
+        std::optional<std::string> read_header(std::ifstream& file) {
             file.seekg(0x16, std::ios::beg);
+
+            return {};
         }
 
-        void read_fl_version(std::ifstream& file) {
+        std::optional<std::string> read_fl_version(std::ifstream& file) {
             uint8_t fl_version_identifier;
             file.read(reinterpret_cast<char*>(&fl_version_identifier), sizeof(fl_version_identifier));
-            _status = fl_version_identifier == BlockIdentifier::FL_VERSION;
-            if (!_status) {
-                return;
+            if (fl_version_identifier != BlockIdentifier::FL_VERSION) {
+                return "expected fl version identifier";
             }
 
             uint8_t fl_version_size;
             file.read(reinterpret_cast<char*>(&fl_version_size), sizeof(fl_version_size));
             file.seekg(fl_version_size, std::ios::cur);
+
+            return {};
         }
 
-        void read_gibberish(std::ifstream& file) {
+        std::optional<std::string> read_gibberish(std::ifstream& file) {
             file.seekg(0x0c, std::ios::cur);
+
+            return {};
         }
 
-        void read_samples(std::ifstream& file) {
+        std::optional<std::string> read_samples(std::ifstream& file) {
             uint8_t actual_block_identifier;
             file.read(reinterpret_cast<char*>(&actual_block_identifier), sizeof(actual_block_identifier));
-            _status = actual_block_identifier == _block_identifier;
-            if (!_status) {
-                return;
+            if (actual_block_identifier != _block_identifier) {
+                return "expected block identifier " + std::to_string(_block_identifier);
             }
 
             uint8_t blocks_size;
             file.read(reinterpret_cast<char*>(&blocks_size), sizeof(blocks_size));
+
+            _samples_position = file.tellg();
 
             for (uint32_t i { 0 }; i < blocks_size; i += ScoreBlock<_block_identifier>::SIZE) {
                 _samples.emplace_back(file);
             }
 
             uint32_t const& file_size { file.tellg() };
-            _input_data = std::make_unique<char[]>(file_size);
+            _read_data = std::make_unique<char[]>(file_size);
 
             file.seekg(0, std::ios::beg);
-            file.read(_input_data.get(), file_size);
+            file.read(_read_data.get(), file_size);
+
+            return {};
         }
     };
 }
